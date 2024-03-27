@@ -225,11 +225,13 @@ rabbit
             ]);
 
             bot.start(async (ctx) => {
-                await ctx.reply("Добро пожаловать в ВВС!", getReceptKeyboard);
+                await ctx.reply("✌️Добро пожаловать в ВВС!", getReceptKeyboard);
             });
 
             bot.help(async (ctx) => {
-                await ctx.reply("Для начала работы введите /start");
+                await ctx.reply(
+                    "❔Данный бот предназначен для генерации PDF-документа с рецептами по заданным параметрам\nДля начала работы введите /start"
+                );
             });
 
             bot.hears("Получить рецепты", async (ctx) => await ctx.scene.enter("receptForm"));
