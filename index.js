@@ -124,86 +124,104 @@ rabbit
                     return ctx.wizard.next();
                 },
                 async (ctx) => {
-                    if (!ctx.callbackQuery) {
-                        if (ctx.message.text === "/start") return ctx.scene.leave();
-                        await ctx.deleteMessage();
+                    try {
+                        if (!ctx.callbackQuery) {
+                            if (ctx.message.text === "/start") return ctx.scene.leave();
+                            await ctx.deleteMessage();
 
-                        return;
+                            return;
+                        }
+
+                        const callbackData = JSON.parse(ctx.callbackQuery.data);
+                        ctx.wizard.state.messageText = `🌍${callbackData.title} кухня \n`;
+                        await ctx.editMessageText(
+                            ctx.wizard.state.messageText + "Выберите тип блюда: ",
+                            mealTypesKeyboard
+                        );
+
+                        ctx.wizard.state.data.country = callbackData.country;
+                    } catch (err) {
+                        await ctx.reply("❗Что-то пошло не так... Введите /start");
+                        console.log(err);
                     }
-
-                    const callbackData = JSON.parse(ctx.callbackQuery.data);
-                    ctx.wizard.state.messageText = `🌍${callbackData.title} кухня \n`;
-                    await ctx.editMessageText(ctx.wizard.state.messageText + "Выберите тип блюда: ", mealTypesKeyboard);
-
-                    ctx.wizard.state.data.country = callbackData.country;
 
                     return ctx.wizard.next();
                 },
                 async (ctx) => {
-                    if (!ctx.callbackQuery) {
-                        if (ctx.message.text === "/start") return ctx.scene.leave();
-                        await ctx.deleteMessage();
+                    try {
+                        if (!ctx.callbackQuery) {
+                            if (ctx.message.text === "/start") return ctx.scene.leave();
+                            await ctx.deleteMessage();
 
-                        return;
+                            return;
+                        }
+
+                        const callbackData = JSON.parse(ctx.callbackQuery.data);
+                        ctx.wizard.state.messageText += `🍽️Тип блюда: ${callbackData.title}\n`;
+                        msgUpd = await ctx.editMessageText(
+                            ctx.wizard.state.messageText + "Введите желаемое количество рецептов (1-10): "
+                        );
+
+                        ctx.wizard.state.data.type = callbackData.mealType;
+                    } catch (err) {
+                        await ctx.reply("❗Что-то пошло не так... Введите /start");
+                        console.log(err);
                     }
-
-                    const callbackData = JSON.parse(ctx.callbackQuery.data);
-                    ctx.wizard.state.messageText += `🍽️Тип блюда: ${callbackData.title}\n`;
-                    msgUpd = await ctx.editMessageText(
-                        ctx.wizard.state.messageText + "Введите желаемое количество рецептов (1-10): "
-                    );
-
-                    ctx.wizard.state.data.type = callbackData.mealType;
 
                     return ctx.wizard.next();
                 },
                 async (ctx) => {
-                    if (ctx.message.text === "/start") return ctx.scene.leave();
-                    if (isNaN(ctx.message.text)) {
+                    try {
+                        if (ctx.message.text === "/start") return ctx.scene.leave();
+                        if (isNaN(ctx.message.text)) {
+                            await ctx.telegram.editMessageText(
+                                msgUpd.chat.id,
+                                msgUpd.message_id,
+                                undefined,
+                                ctx.wizard.state.messageText +
+                                    "Введите желаемое количество рецептов (1-10): \n❗Введите число"
+                            );
+                            await ctx.deleteMessage();
+
+                            return;
+                        }
+                        if (ctx.message.text > 10 || ctx.message.text < 1) {
+                            await ctx.telegram.editMessageText(
+                                msgUpd.chat.id,
+                                msgUpd.message_id,
+                                undefined,
+                                ctx.wizard.state.messageText +
+                                    "Введите желаемое количество рецептов (1-10): \n❗Введите число в диапазоне 1-10"
+                            );
+                            await ctx.deleteMessage();
+
+                            return;
+                        }
+                        await ctx.deleteMessage();
+                        ctx.wizard.state.data.count = ctx.message.text;
+                        ctx.wizard.state.data.telegram_id = ctx.update.message.chat.id;
+
+                        ctx.wizard.state.messageText += `📋Количество рецептов: ${ctx.message.text}\n`;
+
                         await ctx.telegram.editMessageText(
                             msgUpd.chat.id,
                             msgUpd.message_id,
                             undefined,
-                            ctx.wizard.state.messageText +
-                                "Введите желаемое количество рецептов (1-10): \n❗Введите число"
+                            ctx.wizard.state.messageText
                         );
-                        await ctx.deleteMessage();
 
-                        return;
-                    }
-                    if (ctx.message.text > 10 || ctx.message.text < 1) {
+                        channel.publish("recept", "rreq", Buffer.from(JSON.stringify(ctx.wizard.state.data)));
+                        ctx.wizard.state.messageText += `✅Запрос успешно отправлен! Ожидайте`;
                         await ctx.telegram.editMessageText(
                             msgUpd.chat.id,
                             msgUpd.message_id,
                             undefined,
-                            ctx.wizard.state.messageText +
-                                "Введите желаемое количество рецептов (1-10): \n❗Введите число в диапазоне 1-10"
+                            ctx.wizard.state.messageText
                         );
-                        await ctx.deleteMessage();
-
-                        return;
+                    } catch (err) {
+                        await ctx.reply("❗Что-то пошло не так... Введите /start");
+                        console.log(err);
                     }
-                    await ctx.deleteMessage();
-                    ctx.wizard.state.data.count = ctx.message.text;
-                    ctx.wizard.state.data.telegram_id = ctx.update.message.chat.id;
-
-                    ctx.wizard.state.messageText += `📋Количество рецептов: ${ctx.message.text}\n`;
-
-                    await ctx.telegram.editMessageText(
-                        msgUpd.chat.id,
-                        msgUpd.message_id,
-                        undefined,
-                        ctx.wizard.state.messageText
-                    );
-
-                    channel.publish("recept", "rreq", Buffer.from(JSON.stringify(ctx.wizard.state.data)));
-                    ctx.wizard.state.messageText += `✅Запрос успешно отправлен! Ожидайте`;
-                    await ctx.telegram.editMessageText(
-                        msgUpd.chat.id,
-                        msgUpd.message_id,
-                        undefined,
-                        ctx.wizard.state.messageText
-                    );
 
                     return ctx.scene.leave();
                 }
